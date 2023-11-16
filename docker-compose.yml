@@ -1,0 +1,54 @@
+version: '3.1'
+
+volumes:
+  app:
+  mysql_data:
+
+services:
+  uvdesk:
+    image: dietermartens/uvdesk
+    environment:
+      - APP_ENV=dev
+      - APP_SECRET=
+      - APP_TIMEZONE=America/New_York
+      - APP_CURRENCY=USD
+      - CRON_USER1=root
+      - CRON_SCHEDULE=*/5 * * * *
+      - CRON_COMMAND=cd /var/www/html && php bin/console uvdesk:refresh-mailbox info@example.com support@example.com
+    restart: always
+    extra_hosts:
+      - "{uvdesk.example.com}:127.0.0.1"
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - public
+    volumes:
+      - app:/var/www/html
+  mysql:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./create_db_user.sql:/docker-entrypoint-initdb.d/create_user.sql
+    # NOTE: use of "mysql_native_password" is not recommended: https://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-passwordps://dev.mysql.com/doc/refman/8.0/en/upgrading-from-previous-series.html#upgrade-caching-sha2-password
+    # (this is just an example, not intended to be a production configuration)nfiguration)
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    networks:
+      - public
+    ports:
+      - "3306:3306"
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8081:8080
+    depends_on:
+      - mysql
+    networks:
+      - public
+networks:
+  public:
